@@ -1,0 +1,431 @@
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <script>
+    alert("{{messages[-1]}}")
+  </script>
+  {% endif %}
+{% endwith %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="static/css/main.css">
+    <script src="https://d3js.org/d3.v3.js"></script>
+      <script>
+        d3v3 = d3;
+        window.d3 = null;
+      </script>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script>
+      d3v4 = d3;
+      window.d3 = null;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@4" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6" charset="utf-8"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  </head>
+  <header>
+    <div id="header_text">
+      profiling report system
+    </div>
+    <button class="button" onclick = "moveDetail()">
+      <img src="/static/data/detail.png" width = 35px; height = 35px;>
+    </button>
+    <button class="button" onclick = "window.print()">
+      <img src="/static/data/save.png" width = 30px; height = 30px;>
+    </button>
+  </header>
+  <body>
+    <div id="wrap">
+      <div id="left">
+        <div id="setting_title">
+          setting
+        </div>
+        <div id="setting">
+          <form method="post" action="/setting" class="setting_form">
+            recommend method
+            <div>
+              <input type="radio" name="first_radio_name" value="A">
+              based on the ratio of causes of poor data quality
+            </div>
+            <div>
+              <input type="radio" name="first_radio_name" value="B">
+              based on normality
+            </div>
+            <div>
+              <input type="radio" name="first_radio_name" value="C">
+              based on expert provenance
+            </div>
+            <div id="changed_by_radio"></div>            
+          <input type="submit" value="submit" class="setting_submit"> 
+        </form>  
+        </div>
+        <div id="tree_title">
+          provenance graph view
+        </div>
+        <div id="tree" oncontextmenu="return false;"></div>
+      </div>
+      <div id="right">
+        <div id="div_title">
+          report view
+        </div>
+        <div id="input_query">
+          <form method="post" action="/input_query" class="query_form">
+            <input type="text" name="input_query" class="query_box" placeholder="type your question here... (ex) create scatter plot column1, column2">
+            <input type="submit" value="submit" class="query_submit">
+          </form>
+        </div>
+        {{create_div|safe}}
+      </div>
+    </div>
+  </body>
+  <footer>sejong university</footer>
+
+  <!-- ************** API ************** -->
+  <script>
+    var loginData =
+      {
+        "id": "test",
+        "secret": "1234"
+      }
+
+    var statsData = 
+    {
+      "wsId" : 2446,
+      "wsName" : 'kweather',
+      "wsDs" : null,
+      "lastWork" : "take one profiling vis step",
+      "lastWorkComt" : null,
+      "wsCrtDt" : null,
+      "wsModDt" : null,
+      "percent" : "100",
+      "userLockYn" : "\u0000",
+      "logFilePath" : null,
+      "lastWorker" : 'test'
+    }
+
+    var worksData =
+    {
+      "worksMultiId" : {
+        "workId" : 3,
+        "wsId" : 2446
+      },
+      "lockActiveUser" : {
+        "userId" : "test",
+        "userName" : "test=",
+        "userPwd" : null,
+        "company" : null,
+        "position" : null
+      },
+      "filePath" : null,
+      "thput" : null,
+      "worker" : null,
+      "workerCmt" : null,
+      "crtDt" : null,
+      "modDt" : null,
+      "finishYn" : "Y"
+    }
+
+    $.ajax({
+      url: 'http://api.bd.pcninc.co.kr/api/auth/login',
+      type: 'POST',
+      data: JSON.stringify(loginData),
+      dataType: "JSON",
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+        xhr.setRequestHeader('Accept', 'application/json')
+      },
+      error: function (data) {
+        console.log("error")
+      },
+      success: function (data) {
+        console.log(data.body.token)
+        var t = data.body.token
+
+        $.ajax({
+          url: 'http://api.bd.pcninc.co.kr/api/wss/2446',
+          type: 'GET',
+          dataType: "JSON",
+          beforeSend: function(xhr) {
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+            xhr.setRequestHeader('Accept', 'application/json'),
+            xhr.setRequestHeader('Authorization', t)
+          },
+          error: function (data) {
+            console.log("error")
+          },
+          success: function (data) {
+            console.log(data)
+          }
+        })
+
+        $.ajax({
+          url: 'http://api.bd.pcninc.co.kr/api/wss/2446/stats',
+          type: 'PUT',
+          data: JSON.stringify(statsData),
+          dataType: "JSON",
+          beforeSend: function(xhr) {
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+            xhr.setRequestHeader('Accept', 'application/json'),
+            xhr.setRequestHeader('Authorization', t)
+          },
+          error: function (data) {
+            console.log("error")
+          },
+          success: function (data) {
+            console.log(data)
+          }
+        })
+        
+        $.ajax({
+          url: 'http://api.bd.pcninc.co.kr/api/wss/works',
+          type: 'POST',
+          data: JSON.stringify(worksData),
+          dataType: "JSON",
+          beforeSend: function(xhr) {
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+            xhr.setRequestHeader('Accept', 'application/json'),
+            xhr.setRequestHeader('Authorization', t)
+          },
+          error: function (data) {
+            console.log("error")
+          },
+          success: function (data) {
+            console.log(data)
+          }
+        })
+      }
+    })
+  </script>
+  
+  <!-- ************** Function ************** -->
+  <script>
+    function moveDetail(){
+      window.open("http://14.49.44.164:6049/");
+    }
+  </script>
+  <!-- ************** Setting ************** -->
+  <script>
+    $(document).ready(function(){
+      $("input:radio[name=first_radio_name]").click(function(){
+        value = $('input[name="first_radio_name"]:checked').attr('value');
+        if (value == 'A'){
+          $('#changed_by_radio').html('');
+          }
+        if (value == 'B'){
+          $('#changed_by_radio').html('<br><div><input type="radio" name="second_radio_name" value="kstest">kolomogorov smironov</div> <div><input type="radio" name="second_radio_name" value="skewness">skewness</div> <div><input type="radio" name="second_radio_name" value="kurtosis">kurtosis</div>');                        
+        }
+        if (value == 'C'){
+          $('#changed_by_radio').html('');
+        }
+      })
+    });
+  </script>
+
+  <!-- ************** Generate the tree diagram ************** -->
+  <script>
+    var treeData = [{{tree_data|safe}}]
+
+    var margin = {top: 25, right: 25, bottom: 25, left: 25},
+      width = 500,
+      height = 500 - margin.top - margin.bottom;
+
+    var svg = d3v3.select("#tree").append("svg")
+      .attr("viewBox", "0 0 500 1000")
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var i = 0, duration = 0, root;
+
+    var tree = d3v3.layout.tree()
+      .size([height, width]);
+
+    var diagonal = d3v3.svg.diagonal()
+      .projection(function(d) { return [d.x, d.y]; });
+
+    root = treeData[0];
+    root.x0 = 0;
+    root.y0 = 0;
+    
+    update(root);
+
+    function update(source) {
+      // Compute the new tree layout.
+      var nodes = tree.nodes(root).reverse(),
+        links = tree.links(nodes);
+
+      // Normalize for fixed-depth.
+      nodes.forEach(function(d) { d.y = d.depth * 130; });
+
+      // Update the nodes.
+      var node = svg.selectAll("g.node")
+        .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+      // Enter any new nodes at the parent's previous position.
+      var nodeEnter = node.enter().append("g")
+        .attr("class", "node")
+        .on("click", click)
+        .on("auxclick", auxclick);
+
+      nodeEnter.append("circle")
+        .style("fill", '#9e9e9e')
+        .style("opacity", 1.0)
+        .attr("r", 20);
+  
+      nodeEnter.append("text")
+        .attr("x", function(d) { return 0; })
+        .attr("dy", ".35em")
+        .attr("text-anchor", function(d) { return "middle"; })
+        .text(function(d) { return d.name; });
+
+      // Transition nodes to their new position.
+      var nodeUpdate = node.transition()
+        .duration(duration)
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+
+      nodeUpdate.select("circle")
+        .attr("r", 20);
+
+      // Transition exiting nodes to the parent's new position.
+      var nodeExit = node.exit().transition()
+        .duration(duration)
+        .remove();
+
+      nodeExit.select("circle")
+        .attr("r", 20);
+
+      nodeExit.select("text")
+          .style("fill-opacity", 1);
+
+      // Update the links.
+      var link = svg.selectAll("path.link")
+        .data(links, function(d) { return d.target.id; });
+        
+      // Enter any new links at the parent's previous position.
+      link.enter().insert("path", "g")
+        .attr("class", "link")
+        .attr("d", function(d) {
+          var o = {x: source.x0, y: source.y0};
+          return diagonal({source: o, target: o});
+        })        
+
+      // Transition links to their new position.
+      link.transition()
+        .duration(duration)
+        .attr("d", diagonal)
+        .style("stroke", function(d){
+          if (d.target.state == 'current' || d.target.state == 'true'){
+            //return '#9e9e9e';
+            return 'black';
+          }
+        })
+        .style("stroke-width", function(d){
+          if (d.target.state == 'current' || d.target.state == 'true'){
+            return '3px';
+          }
+        });
+
+      // Transition exiting nodes to the parent's new position.
+      link.exit().transition()
+        .duration(duration)
+        .attr("d", function(d) {
+          var o = {x: source.x, y: source.y};
+          return diagonal({source: o, target: o});
+        })
+        .remove();
+
+      // Stash the old positions for transition.
+      nodes.forEach(function(d) {
+        d.x0 = d.x;
+        d.y0 = d.y;
+      });
+    }
+
+    // Toggle children on click.
+    function click(d) {
+      if(d.state == 'current'){
+        current(d);
+      }
+      if(d.state == 'recommend'){
+        recommend(d);
+      }
+    }
+
+    // Toggle children on dblclick.
+    function auxclick(d) {
+      update(d);
+      update_tree(d);
+    }
+
+    function current(d){
+      var file_name = d.file;
+      var name = d.name;
+
+      $.ajax({
+        url: '/current',
+        type: 'POST',
+        data: {'file_name': file_name, 'name': name}
+      }).done(function(){
+        window.location.href = '/';
+      })
+    }
+
+    function recommend(d){
+      var file_name = d.file;
+      var name = d.name;
+
+      $.ajax({
+        url: '/recommend',
+        type: 'POST',
+        data: {'file_name': file_name, 'name': name}
+      }).done(function(){
+        window.location.href = '/';
+      })
+    }
+
+    function update_tree(d){
+      var file_name = d.file;
+      var name = d.name;
+
+      $.ajax({
+        url: '/update_tree',
+        type: 'POST',
+        data: {'file_name': file_name, 'name': name}
+      }).done(function(){
+        window.location.href = '/';
+      })
+    }
+  </script>
+
+  <!-- ************** Generate the vega lite ************** -->
+  <script>
+    {{create_vlSpec|safe}}
+  </script>
+  <!-- ************** Generate the bar chart ************** -->
+  <script>
+    {{create_bar|safe}}
+  </script>
+  <!-- ************** Generate the heatmap ************** -->
+  <script>
+    {{create_heatmap|safe}}
+  </script>
+  <!-- ************** Generate the histogram ************** -->
+  <script>
+    {{create_histogram|safe}}
+  </script>
+  <!-- ************** Generate the density plot ************** -->
+  <script>
+    {{create_density|safe}}
+  </script>
+  <!-- ************** Generate the ecdf ************** -->
+  <script>
+    {{create_ecdf|safe}}
+  </script>
+  <!-- ************** Generate the scale ************** -->
+  <script>
+    {{create_scale|safe}}
+  </script>
+  </body>
+</html>
